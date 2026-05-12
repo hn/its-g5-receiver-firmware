@@ -122,7 +122,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
             mqtt_set_connected(true);
             ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
             msg_id = esp_mqtt_client_subscribe(client, command_topic, 0);
-            ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
+            ESP_LOGI(TAG, "sent subscribe to '%s', msg_id=%d", command_topic, msg_id);
 
             esp_mqtt_client_publish(client, status_topic, "online", sizeof("online") - 1, 0, 1);
 
