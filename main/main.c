@@ -118,6 +118,10 @@ void app_main(void)
 
     config_init();
 
+    /*--- Initialize Console ---*/
+    console_init();
+    ESP_LOGI(TAG, "Starting ITS-G5 receiver");
+
     led_init();
 
     initialize_filesystem();
@@ -132,9 +136,6 @@ void app_main(void)
     initialize_wifi();
     /* Initialize Ethernet */
     initialize_ethernet();
-
-    /*--- Initialize Console ---*/
-    console_init();
 
     sniffer_init();
     ota_init();
