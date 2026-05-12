@@ -35,6 +35,7 @@ static const char TAG[] = "MAIN";
 /* Initialize filesystem */
 static void initialize_filesystem(void)
 {
+#if CONFIG_SNIFFER_STORE_HISTORY
     static wl_handle_t wl_handle;
     const esp_vfs_fat_mount_config_t mount_config = {
         .max_files = 4,
@@ -45,6 +46,7 @@ static void initialize_filesystem(void)
         ESP_LOGE(TAG, "Failed to mount FATFS (%s)", esp_err_to_name(err));
         return;
     }
+#endif
 }
 
 /* Initialize wifi with tcp/ip adapter */
