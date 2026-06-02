@@ -141,6 +141,14 @@ menu "Example Configuration"
         help
             GPIO number where the LED strip is connected
 
+    config LEDSTRIP_COUNT
+        int "Number of LEDs on strip"
+        range 1 5
+        default 5
+        help
+            Number of WS2812 LEDs. Use 1 for single-LED boards (DevKitC),
+            5 for the full status strip.
+
     config ENABLE_TEMPERATURE
         bool "Enable I2C temperature sensor"
         default y
