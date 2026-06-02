@@ -153,3 +153,46 @@ menu "Example Configuration"
         bool "Enable I2C temperature sensor"
         default y
 endmenu
+
+menu "SPI EPPP Configuration"
+    config USE_SPI_EPPP
+        bool "Use SPI EPPP for network connectivity"
+        default n
+        help
+            Use an ESP32 running the EPPP SPI slave (NAT gateway) instead of
+            a hardware Ethernet chip for IP connectivity.
+
+    if USE_SPI_EPPP
+        menu "SPI EPPP Pin Configuration"
+            config SPI_EPPP_PIN_MOSI
+                int "MOSI GPIO number"
+                range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
+                default 5
+
+            config SPI_EPPP_PIN_MISO
+                int "MISO GPIO number"
+                range ENV_GPIO_RANGE_MIN ENV_GPIO_IN_RANGE_MAX
+                default 2
+
+            config SPI_EPPP_PIN_SCLK
+                int "SCLK GPIO number"
+                range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
+                default 7
+
+            config SPI_EPPP_PIN_CS
+                int "CS GPIO number"
+                range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
+                default 6
+
+            config SPI_EPPP_PIN_INT
+                int "Interrupt GPIO number"
+                range ENV_GPIO_RANGE_MIN ENV_GPIO_IN_RANGE_MAX
+                default 9
+        endmenu
+
+        config SPI_EPPP_FREQ_MHZ
+            int "SPI clock frequency (MHz)"
+            range 1 40
+            default 16
+    endif
+endmenu

@@ -43,6 +43,8 @@ Copy the correct sdkconfig file over the default one:
 cp sdkconfig.proto-w5500 sdkconfig
 # or alternatively, for ENC28J60:
 cp sdkconfig.proto-enc28j60 sdkconfig
+# or alternatively, for SPI EPPP link (with e.g. https://github.com/hn/esp32-spi-eppp-server as WiFi gateway):
+cp sdkconfig.proto-spi-eppp sdkconfig
 ```
 
 If you make any changes to the hardware/sdkconfig, make sure to set `HW_VARIANT` to `custom` in the sdkconfig,

@@ -23,6 +23,7 @@
 #include "ota.h"
 #include "sdcard.h"
 #include "spi.h"
+#include "spi_eppp.h"
 #include "temperature.h"
 
 #if CONFIG_SNIFFER_STORE_HISTORY
@@ -136,8 +137,13 @@ void app_main(void)
     /*--- Initialize Network ---*/
     /* Initialize WiFi */
     initialize_wifi();
+#ifdef CONFIG_USE_SPI_EPPP
+    /* Initialize SPI EPPP link */
+    initialize_spi_eppp();
+#else
     /* Initialize Ethernet */
     initialize_ethernet();
+#endif
 
     sniffer_init();
     ota_init();
