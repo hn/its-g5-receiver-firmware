@@ -8,12 +8,15 @@
 #ifdef CONFIG_USE_SPI_EPPP
 
 /**
- * Register IP event handlers, configure the EPPP SPI master and connect
- * to the EPPP server.  Blocks until the PPP link is up and an IP address
- * has been assigned.
+ * Initialize the EPPP SPI master link and bring its TUN netif up.
  *
- * On success, posts APP_ETHERNET_MGMT_INTERFACE_GOT_IP so that the rest
- * of the application (MQTT, etc.) starts normally.
+ * This does NOT block: it returns immediately whether or not the peer
+ * ESP32 (SPI slave / gateway) is present.  A background task pumps the
+ * self-healing SPI transport, and a permanent ICMP health-check pings the
+ * gateway, posting APP_ETHERNET_MGMT_INTERFACE_GOT_IP once it becomes
+ * reachable and APP_ETHERNET_MGMT_INTERFACE_LOST_IP if it later drops —
+ * so MQTT and the LED follow the real link state and recover on their own
+ * (no reboot, no link teardown).
  */
 void initialize_spi_eppp(void);
 

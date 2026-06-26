@@ -22,6 +22,7 @@ idf_component_register(
         esp_netif
         esp_wifi
         fatfs
+        lwip
         nvs_flash
     INCLUDE_DIRS
         "."
