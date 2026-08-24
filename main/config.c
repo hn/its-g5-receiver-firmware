@@ -200,7 +200,7 @@ static esp_err_t config_get_led_brightness(uint8_t *led_brightness)
         if (res != ESP_ERR_NVS_NOT_FOUND)
             ESP_LOGE(TAG, "nvs_get_u8 failed: %s", esp_err_to_name(res));
 
-        out = 255;
+        out = 80;
     }
 
     *led_brightness = out;
