@@ -134,20 +134,49 @@ menu "Example Configuration"
         help
             Priority of sniffer task.
 
-    config LEDSTRIP_PIN
-        int "LED strip pin"
+    choice LED_TYPE
+        prompt "Status LED type"
+        default LED_TYPE_WS2812_STRIP
+        help
+            Which kind of status LED the board carries.  This used to be
+            derived from the LED count, which could not express a plain
+            non-addressable LED: such a board has one LED but no WS2812.
+
+        config LED_TYPE_NONE
+            bool "None"
+
+        config LED_TYPE_GPIO
+            bool "Single plain LED on a GPIO"
+            help
+                One non-addressable LED. No colour available, so states are
+                shown as blink patterns instead.
+
+        config LED_TYPE_WS2812_SINGLE
+            bool "Single WS2812"
+            help
+                One addressable LED showing overall state by colour.
+
+        config LED_TYPE_WS2812_STRIP
+            bool "WS2812 strip, 5 LEDs"
+            help
+                One LED per subsystem: system, sniffer, network, MQTT, C-ITS.
+    endchoice
+
+    config LED_PIN
+        int "Status LED GPIO"
+        depends on !LED_TYPE_NONE
         range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
         default 26
         help
-            GPIO number where the LED strip is connected
+            GPIO the status LED (or the strip's data line) is connected to.
 
-    config LEDSTRIP_COUNT
-        int "Number of LEDs on strip"
-        range 1 5
-        default 5
+    config LED_ACTIVE_LOW
+        bool "Status LED is active low"
+        depends on LED_TYPE_GPIO
+        default n
         help
-            Number of WS2812 LEDs. Use 1 for single-LED boards (DevKitC),
-            5 for the full status strip.
+            Set when the LED is wired between VDD and the GPIO, so driving the
+            pin low lights it up.  Example: NiceMCU ESP32-C5 Mini, GPIO23.
 
     config ENABLE_TEMPERATURE
         bool "Enable I2C temperature sensor"

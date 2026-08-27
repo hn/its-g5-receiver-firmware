@@ -7,6 +7,9 @@ idf_component_register(
         "ethernet.c"
         "events.c"
         "led.c"
+        "led_gpio.c"
+        "led_ws2812_single.c"
+        "led_ws2812_strip.c"
         "mqtt.cpp"
         "ota.c"
         "sdcard.c"
@@ -17,6 +20,7 @@ idf_component_register(
         app_trace
         app_update
         console
+        esp_driver_gpio
         esp_eth
         esp_https_ota
         esp_netif
