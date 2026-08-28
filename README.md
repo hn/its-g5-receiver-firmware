@@ -65,6 +65,8 @@ cp sdkconfig.proto-w5500 sdkconfig
 cp sdkconfig.proto-enc28j60 sdkconfig
 # or alternatively, for SPI EPPP link (with e.g. https://github.com/hn/esp32-spi-eppp-server as WiFi gateway):
 cp sdkconfig.proto-spi-eppp sdkconfig
+# or alternatively, for an LTE modem over PPP (SIMCom A7670E on a BKP-A7670 breakout):
+cp sdkconfig.proto-lte-a7670 sdkconfig
 ```
 
 When switching between variants in a tree that has already been built, run `idf.py fullclean`
@@ -75,6 +77,47 @@ enough.
 
 If you make any changes to the hardware/sdkconfig, make sure to set `HW_VARIANT` to `custom` in the sdkconfig,
 otherwise you may receive incompatible OTA updates if you connect to the official MQTT server.
+
+### LTE variant
+
+Three wires to the modem breakout, no level shifter and no soldering if its
+header is populated — the board's TXD/RXD are 3.3 V TTL:
+
+```arduino
+GPIO8 (UART1 TX) <-> "R" (modem RXD)
+GPIO9 (UART1 RX) <-> "T" (modem TXD)
+GND              <-> "G"
+```
+
+Leave the breakout's `V` pin unconnected and power the modem from its own
+micro-USB jack, 5 V and at least 2 A. Its regulator is linear, so feeding it 9
+or 12 V turns the difference into heat; 5 V is both the recommended and the
+sensible value. Powering it from the MCU board is not an option — LTE transmit
+bursts would drop the supply into the brownout detector.
+
+Then set the APN, and the SIM PIN if the card has one:
+
+```
+config set lteapn internet
+config set ltesimpin 1234
+```
+
+Both take effect on the next boot. The APN can often be left alone: the modem
+picks one from the network by itself where the operator supplies it.
+
+The console is on USB-Serial/JTAG in this variant, not on UART0 as in the
+Ethernet ones: the C5 Mini has no second port, and the interactive prompt has
+to be reachable to set the APN at all.
+
+GNSS is off by default, since the antenna is optional — enable
+`LTE_SIMCOM_GNSS` in menuconfig for a board that has one. It multiplexes the
+single UART so the position can be read while PPP is up, at the price of a
+slightly less reliable link bring-up. The `lte` console command shows the link
+state and the last position.
+
+Keep the LTE and GNSS antennas well away from the ESP32's own antenna. The
+modem transmits at +23 dBm, and on LTE band 3 its third harmonic lands in the
+lower 5 GHz channels.
 
 ## Building
 
