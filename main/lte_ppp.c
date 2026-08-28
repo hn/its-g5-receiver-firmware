@@ -34,6 +34,7 @@
 
 #include "config.h"
 #include "events.h"
+#include "lte_gnss.h"
 #include "lte_ppp.h"
 
 static const char TAG[] = "LTE_PPP";
@@ -723,9 +724,23 @@ static void lte_task(void *arg)
         configure_dns();
         announce_link(true);
 
+#ifdef CONFIG_LTE_SIMCOM_GNSS
+        s_stage = "gnss-init";
+        lte_gnss_enable(dce);
+        /* Let the CMUX command channel settle before the first query: right
+         * after the PPP negotiation it comes back empty, and retrying harder
+         * does not help. */
+        vTaskDelay(pdMS_TO_TICKS(2000));
+#endif
+
         s_stage = "online";
         while (link_alive())
         {
+#ifdef CONFIG_LTE_SIMCOM_GNSS
+            lte_gnss_report(dce);
+            if (!link_alive())
+                break;
+#endif
             ESP_LOGI(TAG, "UPLINK: online, UART %d baud", s_active_baud);
 
             /* Sleep in 1 s steps rather than one long block, otherwise the log

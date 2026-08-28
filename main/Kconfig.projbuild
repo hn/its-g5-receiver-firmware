@@ -280,5 +280,36 @@ menu "LTE Modem Configuration"
                 1400-byte PPP frames pick up bit errors under load.  AT+IPR is
                 session-only though, so a failed experiment is undone by
                 power-cycling the modem.
+
+        config LTE_SIMCOM_GNSS
+            bool "Read the GNSS position from the modem"
+            default n
+            help
+                The GNSS antenna is optional, so this is what actually gets
+                configured -- CMUX below follows from it and is not a decision
+                of its own.
+
+                Position comes from AT+CGNSSINFO, never from the NMEA stream:
+                AT+CGNSSPORTSWITCH puts NMEA on the same UART, where it would
+                land in the middle of PPP and destroy the data stream. Reading
+                AT commands while PPP is up means multiplexing the one UART, so
+                enabling this selects CMUX.
+
+                Specific to SIMCom A76xx, both in the commands used and in the
+                reply layout, and verified against an A7670E-MASA. Another
+                module needs its own implementation.
+
+                What it costs is reliability of the bring-up: the first CMUX
+                attempt after a modem restart fails more often than not, and
+                only a full teardown and another attempt succeeds. Plain data
+                mode never showed that. So leaving this off buys a measurably
+                more reliable uplink.
+
+        # Derived, not a choice: multiplexing is the means, GNSS is the
+        # requirement.  Anything else that needs AT access while the link is up
+        # should default this to y as well rather than be configured separately.
+        config LTE_USE_CMUX
+            bool
+            default y if LTE_SIMCOM_GNSS
     endif
 endmenu

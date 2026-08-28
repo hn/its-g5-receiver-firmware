@@ -51,6 +51,32 @@ extern "C" {
  */
 void initialize_lte_ppp(void);
 
+#ifdef CONFIG_LTE_SIMCOM_GNSS
+
+#include <stdbool.h>
+#include <stdint.h>
+
+/*
+ * The last position the modem reported.  Deliberately not the raw CGNSSINFO
+ * field array: that layout is a property of one A76xx manual variant and has no
+ * business crossing a header.
+ */
+typedef struct {
+    bool valid;              /* false until a position has been computed once */
+    int64_t uptime_us;       /* esp_timer_get_time() when this was parsed */
+    char mode[4];            /* "2" or "3" -- a 2D or 3D solution */
+    int sats_gps, sats_glonass, sats_galileo, sats_beidou;
+    char lat[16], lon[16];   /* decimal degrees as reported, e.g. "50.7152863" */
+    char ns[2], ew[2];
+    char alt[12];            /* metres; reference surface unclear, see the parser */
+    double hdop;
+} lte_gnss_fix_t;
+
+/** Copy the last position.  Returns false while there has never been one. */
+bool lte_gnss_get_fix(lte_gnss_fix_t *out);
+
+#endif /* CONFIG_LTE_SIMCOM_GNSS */
+
 #ifdef __cplusplus
 }
 #endif

@@ -7,6 +7,7 @@ idf_component_register(
         "ethernet.c"
         "events.c"
         "led.c"
+        "lte_gnss_simcom.c"
         "lte_ppp.c"
         "led_gpio.c"
         "led_ws2812_single.c"
