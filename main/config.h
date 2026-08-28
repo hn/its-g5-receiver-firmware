@@ -9,6 +9,11 @@ extern "C" {
 #define CONFIG_NODEID_BUFFER_SIZE 64
 #define CONFIG_MQTT_URI_BUFFER_SIZE 256
 #define CONFIG_IPV4_BUFFER_SIZE 16
+/* Not CONFIG_LTE_*: that prefix belongs to the Kconfig symbols of the LTE
+ * uplink, and a future Kconfig option of the same name would silently
+ * redefine these. */
+#define CONFIG_APN_BUFFER_SIZE 64
+#define CONFIG_SIM_PIN_BUFFER_SIZE 9 /* 4-8 digits plus the terminator */
 
 void config_init(void);
 
@@ -25,6 +30,8 @@ typedef enum {
     CONFIG_INDEX_BROADCAST_ONLY,
     CONFIG_INDEX_LED_BRIGHTNESS,
     CONFIG_INDEX_LED_OVERRIDE_COLOR,
+    CONFIG_INDEX_LTE_APN,
+    CONFIG_INDEX_LTE_SIM_PIN,
 } config_index_t;
 
 esp_err_t config_get_u8(config_index_t index, uint8_t *out);

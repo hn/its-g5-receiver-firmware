@@ -58,6 +58,7 @@ static esp_err_t config_get_autostart_chan(uint32_t *autostart_chan);
 static esp_err_t config_get_broadcast_only(uint8_t *broadcast_only);
 static esp_err_t config_get_led_brightness(uint8_t *led_brightness);
 static esp_err_t config_get_led_override_color(uint32_t *led_override_color);
+static esp_err_t config_get_lte_apn(char *out, size_t *size);
 
 static const config_key_t config_keys[] = {
     [CONFIG_INDEX_NODEID]             = { "nodeid",        NVS_TYPE_STR, CONFIG_NODEID_BUFFER_SIZE,   config_get_node_id,            NULL },
@@ -72,6 +73,8 @@ static const config_key_t config_keys[] = {
     [CONFIG_INDEX_BROADCAST_ONLY]     = { "broadcastonly", NVS_TYPE_U8,  0,                           config_get_broadcast_only,     NULL },
     [CONFIG_INDEX_LED_BRIGHTNESS]     = { "ledbrightness", NVS_TYPE_U8,  0,                           config_get_led_brightness,     NULL },
     [CONFIG_INDEX_LED_OVERRIDE_COLOR] = { "ledoverride",   NVS_TYPE_U32, 0,                           config_get_led_override_color, NULL },
+    [CONFIG_INDEX_LTE_APN]            = { "lteapn",        NVS_TYPE_STR, CONFIG_APN_BUFFER_SIZE,      config_get_lte_apn,            NULL },
+    [CONFIG_INDEX_LTE_SIM_PIN]        = { "ltesimpin",     NVS_TYPE_STR, CONFIG_SIM_PIN_BUFFER_SIZE,  NULL,                          NULL },
 };
 #define CONFIG_KEYS_END (&config_keys[sizeof(config_keys)/sizeof(*config_keys)])
 
@@ -138,6 +141,46 @@ static esp_err_t config_get_mqtt_uri(char *out, size_t *size)
             ESP_LOGW(TAG, "nvs_get_str failed: %s", esp_err_to_name(res));
 
         int print_res = snprintf(out, *size, "%s", "mqtts://cits1.opentrafficmap.org");
+
+        if (print_res > *size - 1)
+        {
+            ESP_LOGE(TAG, "buffer too small to print");
+            return ESP_ERR_INVALID_SIZE;
+        }
+
+        if (print_res < 0)
+        {
+            ESP_LOGE(TAG, "snprintf failed");
+            return ESP_ERR_INVALID_STATE;
+        }
+
+        size_copy = print_res + 1;
+    }
+
+    *size = size_copy;
+
+    return ESP_OK;
+}
+
+/*
+ * The modem picks an APN by itself when the network offers one -- measured on a
+ * German Telefonica SIM, which auto-selected internet.mnc007.mcc262.gprs and
+ * got an address without any configuration.  There is still a default here
+ * because esp_modem always sends AT+CGDCONT when entering data mode, so an
+ * empty value would become AT+CGDCONT=1,"IP","" rather than no command at all.
+ * "internet" is the most widely used APN and is what this was verified with.
+ */
+static esp_err_t config_get_lte_apn(char *out, size_t *size)
+{
+    size_t size_copy = *size;
+
+    esp_err_t res = nvs_get_str(handle, "lteapn", out, &size_copy);
+    if (res != ESP_OK)
+    {
+        if (res != ESP_ERR_NVS_NOT_FOUND)
+            ESP_LOGW(TAG, "nvs_get_str failed: %s", esp_err_to_name(res));
+
+        int print_res = snprintf(out, *size, "%s", "internet");
 
         if (print_res > *size - 1)
         {
