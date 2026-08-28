@@ -51,6 +51,9 @@ extern "C" {
  */
 void initialize_lte_ppp(void);
 
+/** Register the "lte" console command.  Call after console_init(). */
+void lte_register_commands(void);
+
 #ifdef CONFIG_LTE_SIMCOM_GNSS
 
 #include <stdbool.h>

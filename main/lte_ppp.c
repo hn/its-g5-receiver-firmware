@@ -21,11 +21,13 @@
 #include <string.h>
 
 #include "driver/uart.h"
+#include "esp_console.h"
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_modem_api.h"
 #include "esp_netif.h"
 #include "esp_netif_ppp.h"
+#include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include "freertos/task.h"
@@ -758,6 +760,66 @@ static void lte_task(void *arg)
         teardown_ppp(dce);
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Console command                                                   */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Reports the cached state only, and must stay that way: it must never issue an
+ * AT command.  esp_modem's C API is not safe against a concurrent mode change,
+ * and the console task would be racing the recovery ladder -- a set_mode in
+ * flight plus an AT from another task is how a DTE gets wedged.
+ */
+static int cmd_lte(int argc, char **argv)
+{
+    esp_netif_ip_info_t info = { 0 };
+    bool have_ip = s_ppp_netif &&
+                   esp_netif_get_ip_info(s_ppp_netif, &info) == ESP_OK &&
+                   info.ip.addr != 0;
+
+    ESP_LOGI(TAG, "stage=%s announced=%s uart=%d baud ip=" IPSTR,
+             s_stage, s_ip_announced ? "up" : "down", s_active_baud,
+             IP2STR(&info.ip));
+
+    if (!have_ip)
+        ESP_LOGI(TAG, "no address -- the uplink is not up");
+
+#ifdef CONFIG_LTE_SIMCOM_GNSS
+    lte_gnss_fix_t fix;
+
+    if (!lte_gnss_get_fix(&fix))
+    {
+        ESP_LOGI(TAG, "GNSS: no position computed yet");
+        return 0;
+    }
+
+    int age_s = (int)((esp_timer_get_time() - fix.uptime_us) / 1000000);
+
+    ESP_LOGI(TAG, "GNSS: %sD position from %d GPS + %d GLONASS + %d Galileo + "
+             "%d BeiDou satellites, %d s ago",
+             fix.mode, fix.sats_gps, fix.sats_glonass, fix.sats_galileo,
+             fix.sats_beidou, age_s);
+    ESP_LOGI(TAG, "GNSS: position %s %s, %s %s, altitude %s m "
+             "(reference surface unclear)",
+             fix.lat, fix.ns, fix.lon, fix.ew, fix.alt);
+    ESP_LOGI(TAG, "GNSS: horizontal geometry HDOP %.2f", fix.hdop);
+#endif
+
+    return 0;
+}
+
+void lte_register_commands(void)
+{
+    const esp_console_cmd_t cmd = {
+        .command = "lte",
+        .help = "show the LTE uplink state and the last GNSS position",
+        .hint = NULL,
+        .func = &cmd_lte,
+        .argtable = NULL
+    };
+    ESP_ERROR_CHECK(esp_console_cmd_register(&cmd));
 }
 
 void initialize_lte_ppp(void)

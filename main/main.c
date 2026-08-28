@@ -173,6 +173,10 @@ void app_main(void)
 
     register_ota_cmd();
 
+#ifdef CONFIG_USE_LTE_PPP
+    lte_register_commands();
+#endif
+
     sniffer_autostart();
 
     // start console REPL
