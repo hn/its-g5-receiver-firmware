@@ -19,6 +19,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
+#include <time.h>
 
 #include "esp_log.h"
 #include "esp_modem_api.h"
@@ -134,6 +136,75 @@ static void gnss_log_mode_once(esp_modem_dce_t *dce)
         ESP_LOGW(TAG, "GNSS: mode %d not decoded, raw reply \"%s\"", mode, out);
 
     done = true;
+}
+
+/*
+ * Adopt the GNSS time as the system clock.
+ *
+ * The ESP32 has a POSIX clock (settimeofday()/gettimeofday(), with
+ * time()/strftime() on top), and this board has no battery-backed RTC, so
+ * without a source the clock starts at the epoch on every boot.  Nothing else
+ * in this firmware sets it -- there is no SNTP client -- and GNSS supplies a
+ * time that needs no network at all, which matters when the uplink is the thing
+ * that is down.
+ *
+ * Accurate to tens of milliseconds, limited by the reply's trip across the UART
+ * and the CMUX channel.  The modem's 1PPS output would be nanosecond-grade but
+ * is not brought out on the breakout.
+ *
+ * timegm() rather than mktime(): the reply is UTC, and mktime() would apply the
+ * local timezone on top of it.
+ */
+static void set_system_time(const char *d, const char *t)
+{
+    int day, mon, year, hour, min, sec;
+
+    if (sscanf(d, "%2d%2d%2d", &day, &mon, &year) != 3 ||
+        sscanf(t, "%2d%2d%2d", &hour, &min, &sec) != 3)
+        return;
+
+    struct tm tm = {
+        .tm_mday = day,
+        .tm_mon  = mon - 1,          /* struct tm counts months from 0 */
+        .tm_year = 2000 + year - 1900,
+        .tm_hour = hour,
+        .tm_min  = min,
+        .tm_sec  = sec,
+    };
+
+    time_t epoch = timegm(&tm);
+    if (epoch <= 0)
+        return;
+
+    struct timeval before;
+    gettimeofday(&before, NULL);
+    long long offset = (long long)epoch - (long long)before.tv_sec;
+
+    struct timeval tv = { .tv_sec = epoch, .tv_usec = 0 };
+    if (settimeofday(&tv, NULL) != 0)
+    {
+        ESP_LOGW(TAG, "GNSS: could not set the system clock");
+        return;
+    }
+
+    /*
+     * Set on every position, log only a real correction.  This SoC has no
+     * temperature-compensated crystal and drifts by tens of ppm, while GNSS
+     * offers a fresh time every round for free.
+     *
+     * No first-time special case needed: an unset clock is billions of seconds
+     * off and trips the threshold by itself, and the printed offset says which
+     * case it was.  The threshold is 2 s because the reply's own latency
+     * already accounts for a fraction of a second.
+     */
+    if (offset > 2 || offset < -2)
+    {
+        char buf[32];
+        time_t now = time(NULL);
+        strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", gmtime(&now));
+        ESP_LOGI(TAG, "GNSS: system clock set to %s UTC, was off by %lld s",
+                 buf, offset);
+    }
 }
 
 /*
@@ -275,6 +346,7 @@ void lte_gnss_report(esp_modem_dce_t *dce)
     {
         snprintf(when, sizeof(when), ", time 20%.2s-%.2s-%.2s %.2s:%.2s:%.2s UTC",
                  d + 4, d + 2, d, t, t + 2, t + 4);
+        set_system_time(d, t);
     }
 
     ESP_LOGI(TAG, "GNSS: horizontal geometry HDOP %s (%s)%s",
