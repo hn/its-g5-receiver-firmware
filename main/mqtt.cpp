@@ -15,6 +15,7 @@
 
 #include "cmd_sniffer.h"
 #include "config.h"
+#include "lte_ppp.h"
 #include "ethernet.h"
 #include "events.h"
 #include "temperature.h"
@@ -33,6 +34,7 @@ static char packet_topic[128];
 static char status_topic[128];
 static char stats_topic[128];
 static char info_topic[128];
+static char position_topic[128];
 
 static esp_timer_handle_t stats_timer_handle;
 
@@ -70,6 +72,55 @@ static void publish_node_info(void)
     esp_mqtt_client_publish(client, info_topic, info, written, 0, 0);
 }
 
+/*
+ * Publish the last GNSS position, if the board has GNSS.
+ *
+ * Unreachable on purpose, and not behind a Kconfig option: neither the topic
+ * nor the payload schema is agreed with upstream, and an option would promise a
+ * working feature.  A `static const bool` rather than #if 0 so the compiler
+ * keeps type-checking this against lte_gnss_get_fix() and the JSON document --
+ * it cannot rot silently -- while the optimiser drops the branch, so a shipped
+ * image pays nothing for it.
+ *
+ * Pulled from the stats timer rather than pushed from the LTE task: that reuses
+ * an existing 60 s cadence, cannot attempt a publish while MQTT is down, and
+ * keeps the send rate independent of the modem loop.  The age of the fix goes
+ * into the payload so a stale position is visible to the receiver instead of
+ * looking current.
+ */
+static void publish_gnss_position(void)
+{
+#if defined(CONFIG_USE_LTE_PPP) && defined(CONFIG_LTE_SIMCOM_GNSS)
+    static const bool gnss_publish_enabled = false;
+
+    /* Early, so the optimiser drops everything below and a shipped image pays
+     * nothing -- while the compiler still parses and type-checks it. */
+    if (!gnss_publish_enabled)
+        return;
+
+    lte_gnss_fix_t fix;
+
+    if (!lte_gnss_get_fix(&fix))
+        return;
+
+    char payload[160];
+    JsonDocument doc;
+
+    doc["lat"] = fix.lat;
+    doc["ns"] = fix.ns;
+    doc["lon"] = fix.lon;
+    doc["ew"] = fix.ew;
+    doc["alt"] = fix.alt;
+    doc["hdop"] = fix.hdop;
+    doc["sats"] = fix.sats_gps + fix.sats_glonass + fix.sats_galileo +
+                  fix.sats_beidou;
+    doc["age"] = (uint32_t)((esp_timer_get_time() - fix.uptime_us) / 1000000);
+
+    size_t written = serializeJson(doc, payload);
+    esp_mqtt_client_publish(client, position_topic, payload, written, 0, 0);
+#endif
+}
+
 static void publish_stats_timer_cb(void *)
 {
     char stats[128];
@@ -89,6 +140,8 @@ static void publish_stats_timer_cb(void *)
 
     size_t written = serializeJson(doc, stats);
     esp_mqtt_client_publish(client, stats_topic, stats, written, 0, 0);
+
+    publish_gnss_position();
 }
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data) {
@@ -220,6 +273,9 @@ void mqtt_start(void)
 
     strcpy(stats_topic, topic_prefix);
     strcat(stats_topic, "stats");
+
+    strcpy(position_topic, topic_prefix);
+    strcat(position_topic, "position");
 
     esp_mqtt_client_config_t mqtt_cfg{};
 
