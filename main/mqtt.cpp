@@ -103,6 +103,39 @@ static void publish_gnss_position(void)
     if (!lte_gnss_get_fix(&fix))
         return;
 
+    /*
+     * Only publish when the position actually moved, to keep a metered SIM from
+     * paying for a stationary receiver.  Most of these devices never move.
+     *
+     * No upper bound on the interval, deliberately: the server keeps the last
+     * coordinates it was given, and it decides whether a node is offline from
+     * something other than position reports.  So repeating an unchanged
+     * position would buy nothing at all.
+     */
+    static const double publish_min_move_m = 5.0;
+
+    static bool published_before;
+    static double last_lat, last_lon;
+
+    double lat = atof(fix.lat);
+    double lon = atof(fix.lon);
+
+    if (published_before)
+    {
+        /* Equirectangular approximation: at these distances the error is far
+         * below the metre the threshold is expressed in, and it avoids pulling
+         * trigonometry into the publish path. */
+        double dlat = (lat - last_lat) * 111320.0;
+        double dlon = (lon - last_lon) * 111320.0 * cos(lat * M_PI / 180.0);
+
+        if (sqrt(dlat * dlat + dlon * dlon) < publish_min_move_m)
+            return;
+    }
+
+    published_before = true;
+    last_lat = lat;
+    last_lon = lon;
+
     char payload[160];
     JsonDocument doc;
 
