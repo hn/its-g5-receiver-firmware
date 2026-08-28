@@ -7,6 +7,7 @@ idf_component_register(
         "ethernet.c"
         "events.c"
         "led.c"
+        "lte_ppp.c"
         "led_gpio.c"
         "led_ws2812_single.c"
         "led_ws2812_strip.c"
@@ -21,6 +22,7 @@ idf_component_register(
         app_update
         console
         esp_driver_gpio
+        esp_driver_uart
         esp_eth
         esp_https_ota
         esp_netif

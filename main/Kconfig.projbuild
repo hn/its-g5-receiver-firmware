@@ -225,3 +225,60 @@ menu "SPI EPPP Configuration"
             default 16
     endif
 endmenu
+
+menu "LTE Modem Configuration"
+    config USE_LTE_PPP
+        bool "Use an LTE modem over PPP for network connectivity"
+        depends on !USE_SPI_EPPP
+        default n
+        help
+            Use a SIMCom A7670E on a local UART for IP connectivity, instead of
+            a hardware Ethernet chip or the SPI EPPP gateway.  Needs a data SIM;
+            set the APN with "config set lteapn" and, if the SIM has one, the
+            PIN with "config set ltesimpin".
+
+            The exclusion with USE_SPI_EPPP is one-way on purpose: two symbols
+            each depending on the other's negation is a recursive dependency
+            that Kconfig rejects, and moving USE_SPI_EPPP into a shared choice
+            would mean touching all three existing sdkconfig variants.  So turn
+            SPI EPPP off first.
+
+    if USE_LTE_PPP
+        config LTE_PIN_TX
+            int "UART TX GPIO number (to the modem's RXD)"
+            range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
+            default 8
+
+        config LTE_PIN_RX
+            int "UART RX GPIO number (from the modem's TXD)"
+            range ENV_GPIO_RANGE_MIN ENV_GPIO_IN_RANGE_MAX
+            default 9
+            help
+                Note that 9 is also the default of SPI_EPPP_PIN_INT and the INT
+                pin the README documents for the Ethernet modules.  Harmless,
+                since those uplinks are mutually exclusive with this one, but
+                worth knowing when copying an sdkconfig together.
+
+        config LTE_UART_TARGET_BAUD
+            int "Local UART baud rate to switch the modem to"
+            range 9600 921600
+            default 115200
+            help
+                Rate of the wired UART between MCU and modem.  This is NOT the
+                mobile data rate: LTE Cat 1 does 10 Mbit/s down and 5 Mbit/s up,
+                far more than three jumper wires carry.  The UART is the
+                bottleneck, not the network.
+
+                The modem always comes up at its stored AT+IPREX rate (115200);
+                this is the rate the firmware then switches it to with AT+IPR.
+                Measured on the BKP-A7670 breakout: ~72 kbit/s at 115200,
+                ~275 kbit/s at 460800, which is four times what SIMCom
+                recommends for that board's two-transistor level shifter.
+
+                Do not raise this blindly.  A rate the wiring cannot carry does
+                not fail cleanly -- a four-byte AT still gets through while
+                1400-byte PPP frames pick up bit errors under load.  AT+IPR is
+                session-only though, so a failed experiment is undone by
+                power-cycling the modem.
+    endif
+endmenu

@@ -20,6 +20,7 @@
 #include "ethernet.h"
 #include "events.h"
 #include "led.h"
+#include "lte_ppp.h"
 #include "mqtt.h"
 #include "ota.h"
 #include "sdcard.h"
@@ -136,9 +137,14 @@ void app_main(void)
     /*--- Initialize Network ---*/
     /* Initialize WiFi */
     initialize_wifi();
-#ifdef CONFIG_USE_SPI_EPPP
+#if defined(CONFIG_USE_SPI_EPPP)
     /* Initialize SPI EPPP link */
     initialize_spi_eppp();
+#elif defined(CONFIG_USE_LTE_PPP)
+    /* Initialize the LTE modem uplink.  Returns immediately; a background task
+     * owns bring-up and recovery, so everything below still starts without a
+     * network. */
+    initialize_lte_ppp();
 #else
     /* Initialize Ethernet */
     initialize_ethernet();
