@@ -50,7 +50,7 @@ void led_backend_render(const led_state_t *s)
     if (!s->sniffer_running)
         show(SET_IRGB(0, 0xFF, 0, 0), s);                     /* red */
     else if (!s->has_ip)
-        show(SET_IRGB(0, 0xFF, 0xFF, 0), s);                  /* yellow */
+        show(LED_YELLOW(0), s);
     else if (!s->mqtt_connected)
         show(blink_on ? SET_IRGB(0, 0, 0xFF, 0)               /* green */
                       : SET_IRGB(0, 0, 0, 0), s);             /* off */

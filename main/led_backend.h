@@ -18,6 +18,20 @@
 
 #include "ethernet.h"   /* eth_speed_t */
 
+/*
+ * Yellow, with green pulled down from 0xFF.
+ *
+ * A WS2812's green die is considerably brighter than its red one, so an equal
+ * mix renders green-tinged rather than yellow -- which puts it close to the
+ * green used for the neighbouring states.  On the single-LED coding, four of
+ * six states already sit on the red-green axis, so anyone with a red-green
+ * deficiency has to tell them apart by a ratio they cannot see well.  Lowering
+ * green moves this away from green without reaching the orange 0xFF,0xA0,0x00
+ * used for the C-ITS flash.  Value chosen by looking at the actual hardware,
+ * not calculated.
+ */
+#define LED_YELLOW(index) SET_IRGB(index, 0xFF, 0xDD, 0x00)
+
 typedef struct {
     bool booted;             /* APP_BOOT_FINISHED seen */
     bool sniffer_running;

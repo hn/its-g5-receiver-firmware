@@ -104,7 +104,7 @@ void led_backend_render(const led_state_t *s)
     else if (s->mqtt_connected)
         show(SET_IRGB(LED_MQTT, 0, 0xFF, 0), s);
     else
-        show(SET_IRGB(LED_MQTT, 0xFF, 0xFF, 0), s);
+        show(LED_YELLOW(LED_MQTT), s);
 
     if (s->cits_flash)
         show(s->mqtt_connected ? SET_IRGB(LED_CITS, 0, 0, 0xFF)
