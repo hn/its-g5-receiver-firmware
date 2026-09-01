@@ -67,6 +67,12 @@ cp sdkconfig.proto-enc28j60 sdkconfig
 cp sdkconfig.proto-spi-eppp sdkconfig
 ```
 
+When switching between variants in a tree that has already been built, run `idf.py fullclean`
+afterwards.  Which SPI Ethernet driver component is pulled in is decided when CMake configures the
+project, so a stale build directory keeps the previous variant's driver and the build fails with
+`fatal error: esp_eth_mac_w5500.h: No such file or directory`.  Deleting `dependencies.lock` is not
+enough.
+
 If you make any changes to the hardware/sdkconfig, make sure to set `HW_VARIANT` to `custom` in the sdkconfig,
 otherwise you may receive incompatible OTA updates if you connect to the official MQTT server.
 
