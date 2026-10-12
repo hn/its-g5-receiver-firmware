@@ -43,10 +43,13 @@ void led_backend_render(const led_state_t *s) { (void)s; }
 
 uint32_t led_backend_scale(uint32_t irgb, const led_state_t *s)
 {
+    /* The index is taken before the override, so the override replaces the
+     * colour of each LED and not which LED is addressed. */
+    uint8_t i = GET_INDEX(irgb);
+
     if (s->override_color && s->booted)
         irgb = s->override_color;
 
-    uint8_t i = GET_INDEX(irgb);
     uint8_t r = GET_RED(irgb);
     uint8_t g = GET_GREEN(irgb);
     uint8_t b = GET_BLUE(irgb);
