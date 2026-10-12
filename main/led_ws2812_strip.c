@@ -8,8 +8,8 @@
  *   3 MQTT     off = no IP, yellow = disconnected, green = connected
  *   4 C-ITS    off = idle, blue = packet (MQTT up), orange = packet (MQTT down)
  *
- * The strip stays dark until APP_BOOT_FINISHED, so the boot rainbow in main.c
- * is not overwritten.
+ * Until APP_BOOT_FINISHED the strip shows the boot pattern instead: one
+ * distinct colour per LED.
  *
  * The system LED is driven from an event rather than straight from its timer:
  * the timer only posts LED_HEARTBEAT, and the handler does the work.  That way
@@ -52,9 +52,6 @@ static led_state_t last_state;
 
 static void show(uint32_t irgb, const led_state_t *s)
 {
-    if (!s->booted)
-        return;
-
     led_indicator_set_rgb(handle, led_backend_scale(irgb, s));
 }
 
@@ -63,7 +60,15 @@ void led_backend_render(const led_state_t *s)
     last_state = *s;
 
     if (!s->booted)
+    {
+        /* Boot pattern, held until APP_BOOT_FINISHED. */
+        show(SET_IRGB(0, 0xFF,    0,    0), s);
+        show(SET_IRGB(1, 0xFF, 0xFF,    0), s);
+        show(SET_IRGB(2,    0, 0xFF,    0), s);
+        show(SET_IRGB(3,    0,    0, 0xFF), s);
+        show(SET_IRGB(4, 0xFF,    0, 0xFF), s);
         return;
+    }
 
     /* The network LED blinks only while the link is up without an address, so
      * its timer is started and stopped from here rather than from the event
